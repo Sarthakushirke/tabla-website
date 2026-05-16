@@ -98,6 +98,12 @@ const speedOptions = {
   drut: { label: "Drut", bpm: 200, description: "fast" },
 };
 
+const bpmToSpeedLabel = (bpm) => {
+  if (bpm <= 80) return "Vilambit";
+  if (bpm <= 150) return "Madhya";
+  return "Drut";
+};
+
 function AppStyles() {
   return (
     <style>{`
@@ -346,16 +352,18 @@ function SineWave({ activeBeat }) {
 
 function TeentaalPage({ taal, onBack }) {
   const [speedKey, setSpeedKey] = useState("vilambit");
+  const [customBpm, setCustomBpm] = useState(speedOptions.vilambit.bpm);
   const [activeBeat, setActiveBeat] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [soundType, setSoundType] = useState("click");
   const intervalRef = useRef(null);
   const speed = speedOptions[speedKey];
+  const activeBpm = customBpm;
 
   useEffect(() => {
     if (!isPlaying) return;
-    const beatMs = 60000 / speed.bpm;
+    const beatMs = 60000 / activeBpm;
     intervalRef.current = setInterval(() => {
       setActiveBeat((prev) => {
         const next = prev === taal.matras ? 1 : prev + 1;
@@ -364,7 +372,7 @@ function TeentaalPage({ taal, onBack }) {
       });
     }, beatMs);
     return () => clearInterval(intervalRef.current);
-  }, [isPlaying, speed.bpm, soundOn, soundType, taal.matras]);
+  }, [isPlaying, activeBpm, soundOn, soundType, taal.matras]);
 
   const togglePlay = () => {
     if (!isPlaying && soundOn) playBeatSound(activeBeat === 1, soundType);
@@ -417,9 +425,34 @@ function TeentaalPage({ taal, onBack }) {
           <h3>Speed / Laya</h3>
           <div className="mini-list">
             {Object.entries(speedOptions).map(([key, item]) => (
-              <button key={key} className={`btn btn-light ${speedKey === key ? "btn-active" : ""}`} onClick={() => setSpeedKey(key)}>{item.label} · {item.bpm} BPM</button>
+              <button key={key} className={`btn btn-light ${speedKey === key ? "btn-active" : ""}`} onClick={() => {
+                  setSpeedKey(key);
+                  setCustomBpm(item.bpm);
+                }}>{item.label} · {item.bpm} BPM</button>
             ))}
           </div>
+          <div style={{ marginTop: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <strong>Tempo Slider</strong>
+              <span className="badge">{activeBpm} BPM · {bpmToSpeedLabel(activeBpm)}</span>
+            </div>
+            <input
+              type="range"
+              min="40"
+              max="260"
+              value={customBpm}
+              onChange={(e) => setCustomBpm(Number(e.target.value))}
+              style={{ width: "100%", accentColor: "#f97316", cursor: "pointer" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+              <span>40</span>
+              <span>Vilambit</span>
+              <span>Madhya</span>
+              <span>Drut</span>
+              <span>260</span>
+            </div>
+          </div>
+
           <div className="btn-row" style={{ marginTop: 20 }}>
             <button className={`btn ${isPlaying ? "btn-dark" : "btn-green"}`} onClick={togglePlay}>{isPlaying ? "Pause Cycle" : "Start Cycle"}</button>
             <button className="btn btn-light" onClick={() => setActiveBeat(1)}>Reset</button>
