@@ -47,18 +47,12 @@ const taals = [
   },
   {
     id: 3,
-    title: "Bhajani · 8 Beat Cycle",
-    shortTitle: "Bhajani",
-    category: "Taal Theory + Practice",
-    duration: "Interactive",
+    title: "Keherva · 8 Beat Cycle",
+    shortTitle: "Keherva",
+    category: "Coming Soon",
+    duration: "Practice",
     matras: 8,
-    vibhags: 2,
-    beatsPerVibhag: 4,
-    tali: [1],
-    khali: [5],
-    bols: ["Dhin", "NaDhin", "ḍDhin", "Na", "Dhin", "NaTin", "ḍTin", "Na"],
-    text:
-      "Bhajani Taal is an 8-beat cycle commonly used in bhajans and devotional music. It has 2 vibhags of 4 beats each. Tali comes on beat 1 (Sam), and Khali comes on beat 5.",
+    text: "Keherva interactive lesson will be added here next.",
   },
   {
     id: 4,
@@ -377,7 +371,7 @@ function SineWave({ activeBeat }) {
   );
 }
 
-function InteractiveTaalPage({ taal, onBack }) {
+function TeentaalPage({ taal, onBack }) {
   const [speedKey, setSpeedKey] = useState("vilambit");
   const [customBpm, setCustomBpm] = useState(speedOptions.vilambit.bpm);
   const [activeBeat, setActiveBeat] = useState(1);
@@ -409,29 +403,20 @@ function InteractiveTaalPage({ taal, onBack }) {
   return (
     <div className="container">
       <div className="section-head">
-        <div><h2>{taal.shortTitle}</h2><p>{taal.matras}-beat taal cycle · Matra = {taal.matras}, Vibhag = {taal.vibhags}. Tali on {taal.tali.join(", ")} and Khali on {taal.khali.join(", ")}.</p></div>
+        <div><h2>Teentaal</h2><p>16-beat taal cycle · translated from Marathi: Matra = 16, Vibhag = 4. Tali on beats 1, 5, 13 and Khali on beat 9.</p></div>
         <button className="btn btn-light" onClick={onBack}>Back to Taals</button>
       </div>
 
       <div className="taal-layout">
         <div className="taal-card">
-          <span className="badge">About {taal.shortTitle}</span>
+          <span className="badge">About Teentaal</span>
           <p className="muted" style={{ lineHeight: 1.7 }}>{taal.text}</p>
           <div className="info-row"><strong>Total Beats</strong><span>{taal.matras}</span></div>
           <div className="info-row"><strong>Vibhags</strong><span>{taal.vibhags}</span></div>
           <div className="info-row"><strong>Beats per Vibhag</strong><span>{taal.beatsPerVibhag}</span></div>
           <div className="info-row"><strong>Tali / Clap</strong><span className="chip-row">{taal.tali.map((b) => <span className="chip orange" key={b}>{b}</span>)}</span></div>
           <div className="info-row"><strong>Khali / Wave</strong><span className="chip blue">9</span></div>
-          <div style={{ marginTop: 16 }}>
-            <strong>Theka</strong>
-            <p className="muted" style={{ lineHeight: 1.7 }}>
-              {Array.from({ length: Math.ceil(taal.bols.length / 4) }, (_, i) =>
-                taal.bols.slice(i * 4, i * 4 + 4).join(" ")
-              ).map((line, i) => (
-                <span key={i}>{line}<br /></span>
-              ))}
-            </p>
-          </div>
+          <div style={{ marginTop: 16 }}><strong>Theka</strong><p className="muted" style={{ lineHeight: 1.7 }}>Dha Dhin Dhin Dha<br />Dha Dhin Dhin Dha<br />Dha Tin Tin Ta<br />Ta Dhin Dhin Dha</p></div>
         </div>
 
         <div className="taal-card cycle-stage">
@@ -448,8 +433,8 @@ function InteractiveTaalPage({ taal, onBack }) {
               );
             })}
             <div className="center-info">
-              <h2>{taal.shortTitle}</h2>
-              <p className="muted">Beat {activeBeat} / {taal.matras} · <strong>{taal.bols[activeBeat - 1]}</strong></p>
+              <h2>Teentaal</h2>
+              <p className="muted">Beat {activeBeat} / 16 · <strong>{taal.bols[activeBeat - 1]}</strong></p>
               <div className="sine-mini"><SineWave activeBeat={activeBeat} /></div>
               <p className="muted">Circular rhythm ↔ repeating sine wave</p>
             </div>
@@ -503,14 +488,7 @@ function InteractiveTaalPage({ taal, onBack }) {
           </div>
           <div style={{ marginTop: 20 }}>
             <h3>Vibhag Structure</h3>
-            <p className="muted">
-              {Array.from({ length: taal.vibhags }, (_, i) => {
-                const start = i * taal.beatsPerVibhag + 1;
-                const end = start + taal.beatsPerVibhag - 1;
-                const label = taal.khali.some((beat) => beat >= start && beat <= end) ? "Khali" : "Tali";
-                return `${start}–${end} ${label}`;
-              }).join(" · ")}
-            </p>
+            <p className="muted">1–4 Tali · 5–8 Tali · 9–12 Khali · 13–16 Tali</p>
           </div>
         </div>
       </div>
@@ -523,7 +501,7 @@ function InteractiveTaalPage({ taal, onBack }) {
           <SineWave activeBeat={activeBeat} />
         </div>
         <div className="taal-card">
-          <span className="badge">{taal.shortTitle} · Basic Bol</span>
+          <span className="badge">Theka · Basic Bol</span>
           <div className="theka-grid">
             {taal.bols.map((bol, index) => {
               const beat = index + 1;
@@ -560,15 +538,15 @@ function getYoutubeEmbedUrl(url) {
   }
 }
 
-function createEmptyPatternSection(taal) {
-  const rows = taal?.vibhags || 4;
-  const cols = taal?.beatsPerVibhag || 4;
-
+function createEmptyPatternSection(index) {
   return {
     time: "",
-    matrix: Array.from({ length: rows }, () =>
-      Array.from({ length: cols }, () => "")
-    ),
+    matrix: [
+      ["Dha", "Dhin", "Dhin", "Dha"],
+      ["Dha", "Dhin", "Dhin", "Dha"],
+      ["Dha", "Tin", "Tin", "Ta"],
+      ["Ta", "Dhin", "Dhin", "Dha"],
+    ],
     notes: "",
   };
 }
@@ -579,7 +557,7 @@ function createEmptySong(index, taalName) {
     youtubeUrl: "",
     bpm: "",
     taal: taalName,
-    patternSections: [createEmptyPatternSection(taal)],
+    patternSections: [createEmptyPatternSection(1)],
     notes: "",
   };
 }
@@ -597,7 +575,7 @@ function SongsSection({ taal }) {
       return parsed.map((song, index) => ({
         ...createEmptySong(index + 1, taal.shortTitle || taal.title),
         ...song,
-        patternSections: song.patternSections || [createEmptyPatternSection(taal)],
+        patternSections: song.patternSections || [createEmptyPatternSection(1)],
       }));
     } catch {
       return [createEmptySong(1, taal.shortTitle || taal.title)];
@@ -623,7 +601,7 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, songIndex) => {
         if (songIndex !== activeSongIndex) return song;
-        const sections = (song.patternSections || [createEmptyPatternSection(taal)]).map((section, index) =>
+        const sections = (song.patternSections || [createEmptyPatternSection(1)]).map((section, index) =>
           index === sectionIndex ? { ...section, [field]: value } : section
         );
         return { ...song, patternSections: sections };
@@ -635,7 +613,7 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, songIndex) => {
         if (songIndex !== activeSongIndex) return song;
-        const sections = (song.patternSections || [createEmptyPatternSection(taal)]).map((section, index) => {
+        const sections = (song.patternSections || [createEmptyPatternSection(1)]).map((section, index) => {
           if (index !== sectionIndex) return section;
           const matrix = section.matrix.map((row, r) =>
             row.map((cell, c) => (r === rowIndex && c === colIndex ? value : cell))
@@ -651,8 +629,8 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, index) => {
         if (index !== activeSongIndex) return song;
-        const sections = song.patternSections || [createEmptyPatternSection(taal)];
-        return { ...song, patternSections: [...sections, createEmptyPatternSection(taal)] };
+        const sections = song.patternSections || [createEmptyPatternSection(1)];
+        return { ...song, patternSections: [...sections, createEmptyPatternSection(sections.length + 1)] };
       })
     );
   };
@@ -661,7 +639,7 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, index) => {
         if (index !== activeSongIndex) return song;
-        const sections = song.patternSections || [createEmptyPatternSection(taal)];
+        const sections = song.patternSections || [createEmptyPatternSection(1)];
         if (sections.length === 1) return song;
         return { ...song, patternSections: sections.filter((_, i) => i !== sectionIndex) };
       })
@@ -728,7 +706,7 @@ function SongsSection({ taal }) {
           <button className="btn btn-light" onClick={addPatternSection}>+ Add Timestamp Pattern</button>
         </div>
 
-        {(activeSong.patternSections || [createEmptyPatternSection(taal)]).map((section, sectionIndex) => (
+        {(activeSong.patternSections || [createEmptyPatternSection(1)]).map((section, sectionIndex) => (
           <div className="pattern-section" key={sectionIndex}>
             <div className="pattern-head">
               <div className="field pattern-time" style={{ marginTop: 0 }}>
@@ -745,13 +723,10 @@ function SongsSection({ taal }) {
               </button>
             </div>
 
-            <div
-              className="bol-matrix"
-              style={{ gridTemplateColumns: `repeat(${taal.beatsPerVibhag || 4}, 1fr)` }}
-            >
+            <div className="bol-matrix">
               {section.matrix.map((row, rowIndex) =>
                 row.map((cell, colIndex) => {
-                  const beatNumber = rowIndex * (taal.beatsPerVibhag || 4) + colIndex + 1;
+                  const beatNumber = rowIndex * 4 + colIndex + 1;
                   return (
                     <div className="bol-cell" key={`${rowIndex}-${colIndex}`}>
                       <small>Beat {beatNumber}</small>
@@ -988,7 +963,7 @@ function PlaceholderTaalPage({ taal, onBack }) {
 }
 
 function TaalPage({ taal, onBack }) {
-  if (taal.id === 1 || taal.id === 3) return <InteractiveTaalPage taal={taal} onBack={onBack} />;
+  if (taal.id === 1) return <TeentaalPage taal={taal} onBack={onBack} />;
   return <PlaceholderTaalPage taal={taal} onBack={onBack} />;
 }
 
