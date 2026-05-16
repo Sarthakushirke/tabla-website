@@ -560,15 +560,15 @@ function getYoutubeEmbedUrl(url) {
   }
 }
 
-function createEmptyPatternSection(index) {
+function createEmptyPatternSection(taal) {
+  const rows = taal?.vibhags || 4;
+  const cols = taal?.beatsPerVibhag || 4;
+
   return {
     time: "",
-    matrix: [
-      ["Dha", "Dhin", "Dhin", "Dha"],
-      ["Dha", "Dhin", "Dhin", "Dha"],
-      ["Dha", "Tin", "Tin", "Ta"],
-      ["Ta", "Dhin", "Dhin", "Dha"],
-    ],
+    matrix: Array.from({ length: rows }, () =>
+      Array.from({ length: cols }, () => "")
+    ),
     notes: "",
   };
 }
@@ -579,7 +579,7 @@ function createEmptySong(index, taalName) {
     youtubeUrl: "",
     bpm: "",
     taal: taalName,
-    patternSections: [createEmptyPatternSection(1)],
+    patternSections: [createEmptyPatternSection(taal)],
     notes: "",
   };
 }
@@ -597,7 +597,7 @@ function SongsSection({ taal }) {
       return parsed.map((song, index) => ({
         ...createEmptySong(index + 1, taal.shortTitle || taal.title),
         ...song,
-        patternSections: song.patternSections || [createEmptyPatternSection(1)],
+        patternSections: song.patternSections || [createEmptyPatternSection(taal)],
       }));
     } catch {
       return [createEmptySong(1, taal.shortTitle || taal.title)];
@@ -623,7 +623,7 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, songIndex) => {
         if (songIndex !== activeSongIndex) return song;
-        const sections = (song.patternSections || [createEmptyPatternSection(1)]).map((section, index) =>
+        const sections = (song.patternSections || [createEmptyPatternSection(taal)]).map((section, index) =>
           index === sectionIndex ? { ...section, [field]: value } : section
         );
         return { ...song, patternSections: sections };
@@ -635,7 +635,7 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, songIndex) => {
         if (songIndex !== activeSongIndex) return song;
-        const sections = (song.patternSections || [createEmptyPatternSection(1)]).map((section, index) => {
+        const sections = (song.patternSections || [createEmptyPatternSection(taal)]).map((section, index) => {
           if (index !== sectionIndex) return section;
           const matrix = section.matrix.map((row, r) =>
             row.map((cell, c) => (r === rowIndex && c === colIndex ? value : cell))
@@ -651,8 +651,8 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, index) => {
         if (index !== activeSongIndex) return song;
-        const sections = song.patternSections || [createEmptyPatternSection(1)];
-        return { ...song, patternSections: [...sections, createEmptyPatternSection(sections.length + 1)] };
+        const sections = song.patternSections || [createEmptyPatternSection(taal)];
+        return { ...song, patternSections: [...sections, createEmptyPatternSection(taal)] };
       })
     );
   };
@@ -661,7 +661,7 @@ function SongsSection({ taal }) {
     setSongs((prev) =>
       prev.map((song, index) => {
         if (index !== activeSongIndex) return song;
-        const sections = song.patternSections || [createEmptyPatternSection(1)];
+        const sections = song.patternSections || [createEmptyPatternSection(taal)];
         if (sections.length === 1) return song;
         return { ...song, patternSections: sections.filter((_, i) => i !== sectionIndex) };
       })
@@ -728,7 +728,7 @@ function SongsSection({ taal }) {
           <button className="btn btn-light" onClick={addPatternSection}>+ Add Timestamp Pattern</button>
         </div>
 
-        {(activeSong.patternSections || [createEmptyPatternSection(1)]).map((section, sectionIndex) => (
+        {(activeSong.patternSections || [createEmptyPatternSection(taal)]).map((section, sectionIndex) => (
           <div className="pattern-section" key={sectionIndex}>
             <div className="pattern-head">
               <div className="field pattern-time" style={{ marginTop: 0 }}>
@@ -745,10 +745,13 @@ function SongsSection({ taal }) {
               </button>
             </div>
 
-            <div className="bol-matrix">
+            <div
+              className="bol-matrix"
+              style={{ gridTemplateColumns: `repeat(${taal.beatsPerVibhag || 4}, 1fr)` }}
+            >
               {section.matrix.map((row, rowIndex) =>
                 row.map((cell, colIndex) => {
-                  const beatNumber = rowIndex * 4 + colIndex + 1;
+                  const beatNumber = rowIndex * (taal.beatsPerVibhag || 4) + colIndex + 1;
                   return (
                     <div className="bol-cell" key={`${rowIndex}-${colIndex}`}>
                       <small>Beat {beatNumber}</small>
