@@ -188,7 +188,10 @@ function AppStyles() {
       .bol-cell small { display: block; color: #6b7280; margin-bottom: 5px; font-size: 12px; }
       .bol-cell input { text-align: center; font-weight: 800; }
       .pattern-notes { margin-top: 14px; }
-      @media (max-width: 1050px) { .hero, .taal-layout, .grid, .stats, .math-layout, .song-form { grid-template-columns: 1fr; } .cycle-stage { min-height: auto; } .cycle-ring { width: 88vw; height: 88vw; max-width: 620px; max-height: 620px; } .beat-node { transform: rotate(var(--angle)) translateY(calc(-44vw + 34px)) rotate(calc(-1 * var(--angle))); } .beat-label { display: none; } .hero-main h1 { font-size: 40px; } }
+      .composition-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 18px; }
+      .composition-card { padding: 18px; border-radius: 22px; background: #fafaf9; border: 1px solid rgba(0,0,0,0.06); margin-top: 14px; }
+      .composition-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      @media (max-width: 1050px) { .hero, .taal-layout, .grid, .stats, .math-layout, .song-form, .composition-grid { grid-template-columns: 1fr; } .cycle-stage { min-height: auto; } .cycle-ring { width: 88vw; height: 88vw; max-width: 620px; max-height: 620px; } .beat-node { transform: rotate(var(--angle)) translateY(calc(-44vw + 34px)) rotate(calc(-1 * var(--angle))); } .beat-label { display: none; } .hero-main h1 { font-size: 40px; } }
     `}</style>
   );
 }
@@ -506,6 +509,7 @@ function TeentaalPage({ taal, onBack }) {
       </div>
 
       <SongsSection taal={taal} />
+      <CompositionsSection taal={taal} />
     </div>
   );
 }
@@ -768,12 +772,128 @@ function SongsSection({ taal }) {
   );
 }
 
+const compositionTypes = ["Uthan", "Peshkar", "Kisme", "Tihai", "Tukada", "Mukhada"];
+
+function createEmptyComposition(type, index) {
+  return {
+    title: `${type} ${index}`,
+    bpm: "",
+    bols: "",
+    notes: "",
+  };
+}
+
+function CompositionsSection({ taal }) {
+  const storageKey = `tabla-compositions-${taal.shortTitle || taal.title}`;
+  const [activeType, setActiveType] = useState("Uthan");
+  const [data, setData] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+
+    return compositionTypes.reduce((acc, type) => {
+      acc[type] = [createEmptyComposition(type, 1)];
+      return acc;
+    }, {});
+  });
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  }, [data, storageKey]);
+
+  const activeItems = data[activeType] || [createEmptyComposition(activeType, 1)];
+
+  const updateComposition = (index, field, value) => {
+    setData((prev) => ({
+      ...prev,
+      [activeType]: activeItems.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      ),
+    }));
+  };
+
+  const addComposition = () => {
+    setData((prev) => {
+      const current = prev[activeType] || [];
+      return {
+        ...prev,
+        [activeType]: [...current, createEmptyComposition(activeType, current.length + 1)],
+      };
+    });
+  };
+
+  const deleteComposition = (index) => {
+    if (activeItems.length === 1) return;
+    setData((prev) => ({
+      ...prev,
+      [activeType]: activeItems.filter((_, i) => i !== index),
+    }));
+  };
+
+  return (
+    <div className="taal-card" style={{ marginTop: 22 }}>
+      <div className="section-head" style={{ marginTop: 0 }}>
+        <div>
+          <h2>Composition Library</h2>
+          <p>Select a type and write/save compositions like Uthan, Peshkar, Kisme, Tihai, Tukada, and Mukhada.</p>
+        </div>
+        <button className="btn btn-primary" onClick={addComposition}>+ Add {activeType}</button>
+      </div>
+
+      <div className="composition-tabs">
+        {compositionTypes.map((type) => (
+          <button
+            key={type}
+            className={`btn btn-light ${activeType === type ? "btn-active" : ""}`}
+            onClick={() => setActiveType(type)}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
+
+      {activeItems.map((item, index) => (
+        <div className="composition-card" key={index}>
+          <div className="composition-grid">
+            <div className="field">
+              <label className="label">Title</label>
+              <input className="input" value={item.title} onChange={(e) => updateComposition(index, "title", e.target.value)} placeholder={`${activeType} name`} />
+            </div>
+            <div className="field">
+              <label className="label">BPM / Laya</label>
+              <input className="input" value={item.bpm} onChange={(e) => updateComposition(index, "bpm", e.target.value)} placeholder="Example: Vilambit / 80 BPM" />
+            </div>
+            <div className="field song-form-full">
+              <label className="label">Bols / Composition</label>
+              <textarea className="textarea" value={item.bols} onChange={(e) => updateComposition(index, "bols", e.target.value)} placeholder={`Write ${activeType} bols here`} />
+            </div>
+            <div className="field song-form-full">
+              <label className="label">Notes</label>
+              <textarea className="textarea" value={item.notes} onChange={(e) => updateComposition(index, "notes", e.target.value)} placeholder="Meaning, where it starts, where it lands on Sam, practice notes, etc." />
+            </div>
+          </div>
+          <div className="btn-row">
+            <button className="btn btn-light" onClick={() => deleteComposition(index)} disabled={activeItems.length === 1}>Delete This {activeType}</button>
+          </div>
+        </div>
+      ))}
+
+      <div className="btn-row">
+        <button className="btn btn-green" onClick={() => localStorage.setItem(storageKey, JSON.stringify(data))}>Save Composition Library</button>
+      </div>
+      <p className="footer-note">Saved in this browser for now. Later this can be moved to Firebase Firestore per student account.</p>
+    </div>
+  );
+}
+
 function PlaceholderTaalPage({ taal, onBack }) {
   return (
     <div className="container">
       <div className="section-head"><div><h2>{taal.title}</h2><p>{taal.text}</p></div><button className="btn btn-light" onClick={onBack}>Back to Taals</button></div>
       <div className="card"><h3>Coming soon</h3><p className="muted">This taal will get the same interactive circular cycle, speed controls, theka, and maths comparison.</p></div>
       <SongsSection taal={taal} />
+      <CompositionsSection taal={taal} />
     </div>
   );
 }
