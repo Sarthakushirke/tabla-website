@@ -173,7 +173,14 @@ function AppStyles() {
       .theka-cell.active { background: #fff7ed; border-color: #f97316; box-shadow: 0 0 0 4px rgba(249,115,22,0.12); }
       .theka-cell strong { display: block; margin-top: 6px; font-size: 19px; }
       .math-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
-      @media (max-width: 1050px) { .hero, .taal-layout, .grid, .stats, .math-layout { grid-template-columns: 1fr; } .cycle-stage { min-height: auto; } .cycle-ring { width: 88vw; height: 88vw; max-width: 620px; max-height: 620px; } .beat-node { transform: rotate(var(--angle)) translateY(calc(-44vw + 34px)) rotate(calc(-1 * var(--angle))); } .beat-label { display: none; } .hero-main h1 { font-size: 40px; } }
+      .song-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+      .song-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .song-form-full { grid-column: 1 / -1; }
+      .textarea { width: 100%; min-height: 130px; padding: 13px 16px; border-radius: 14px; border: 1px solid rgba(0,0,0,0.08); outline: none; font-size: 15px; background: #fff; font-family: inherit; resize: vertical; }
+      .textarea:focus { border-color: #f97316; box-shadow: 0 0 0 4px rgba(249,115,22,0.12); }
+      .youtube-preview { position: relative; width: 100%; padding-top: 56.25%; border-radius: 22px; overflow: hidden; background: #111827; margin-top: 16px; }
+      .youtube-preview iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+      @media (max-width: 1050px) { .hero, .taal-layout, .grid, .stats, .math-layout, .song-form { grid-template-columns: 1fr; } .cycle-stage { min-height: auto; } .cycle-ring { width: 88vw; height: 88vw; max-width: 620px; max-height: 620px; } .beat-node { transform: rotate(var(--angle)) translateY(calc(-44vw + 34px)) rotate(calc(-1 * var(--angle))); } .beat-label { display: none; } .hero-main h1 { font-size: 40px; } }
     `}</style>
   );
 }
@@ -489,6 +496,142 @@ function TeentaalPage({ taal, onBack }) {
           </div>
         </div>
       </div>
+
+      <SongsSection taal={taal} />
+    </div>
+  );
+}
+
+function getYoutubeEmbedUrl(url) {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    let videoId = "";
+
+    if (parsed.hostname.includes("youtu.be")) {
+      videoId = parsed.pathname.replace("/", "");
+    } else if (parsed.hostname.includes("youtube.com")) {
+      videoId = parsed.searchParams.get("v") || "";
+      if (!videoId && parsed.pathname.includes("/embed/")) {
+        videoId = parsed.pathname.split("/embed/")[1];
+      }
+    }
+
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+  } catch {
+    return "";
+  }
+}
+
+function createEmptySong(index, taalName) {
+  return {
+    title: `Song ${index}`,
+    youtubeUrl: "",
+    bpm: "",
+    taal: taalName,
+    patterns: "",
+    notes: "",
+  };
+}
+
+function SongsSection({ taal }) {
+  const storageKey = `tabla-songs-${taal.shortTitle || taal.title}`;
+  const [activeSongIndex, setActiveSongIndex] = useState(0);
+  const [songs, setSongs] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : [createEmptySong(1, taal.shortTitle || taal.title)];
+    } catch {
+      return [createEmptySong(1, taal.shortTitle || taal.title)];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(songs));
+  }, [songs, storageKey]);
+
+  const activeSong = songs[activeSongIndex] || songs[0];
+  const embedUrl = getYoutubeEmbedUrl(activeSong?.youtubeUrl || "");
+
+  const updateActiveSong = (field, value) => {
+    setSongs((prev) =>
+      prev.map((song, index) =>
+        index === activeSongIndex ? { ...song, [field]: value } : song
+      )
+    );
+  };
+
+  const addSong = () => {
+    setSongs((prev) => {
+      const next = [...prev, createEmptySong(prev.length + 1, taal.shortTitle || taal.title)];
+      setActiveSongIndex(next.length - 1);
+      return next;
+    });
+  };
+
+  const deleteSong = () => {
+    if (songs.length === 1) return;
+    setSongs((prev) => prev.filter((_, index) => index !== activeSongIndex));
+    setActiveSongIndex(0);
+  };
+
+  return (
+    <div className="taal-card" style={{ marginTop: 22 }}>
+      <div className="section-head" style={{ marginTop: 0 }}>
+        <div>
+          <h2>Song Practice Tab</h2>
+          <p>Add songs for this taal, save BPM, YouTube link, and write the patterns you hear.</p>
+        </div>
+        <button className="btn btn-primary" onClick={addSong}>+ Add Song</button>
+      </div>
+
+      <div className="song-tabs">
+        {songs.map((song, index) => (
+          <button key={index} className={`btn btn-light ${activeSongIndex === index ? "btn-active" : ""}`} onClick={() => setActiveSongIndex(index)}>
+            {song.title || `Song ${index + 1}`}
+          </button>
+        ))}
+      </div>
+
+      <div className="song-form">
+        <div className="field">
+          <label className="label">Song Name</label>
+          <input className="input" value={activeSong.title} onChange={(e) => updateActiveSong("title", e.target.value)} placeholder="Example: Song 1" />
+        </div>
+        <div className="field">
+          <label className="label">BPM</label>
+          <input className="input" value={activeSong.bpm} onChange={(e) => updateActiveSong("bpm", e.target.value)} placeholder="Example: 96" />
+        </div>
+        <div className="field">
+          <label className="label">Taal</label>
+          <input className="input" value={activeSong.taal} onChange={(e) => updateActiveSong("taal", e.target.value)} placeholder="Example: Teentaal" />
+        </div>
+        <div className="field">
+          <label className="label">YouTube Link</label>
+          <input className="input" value={activeSong.youtubeUrl} onChange={(e) => updateActiveSong("youtubeUrl", e.target.value)} placeholder="Paste YouTube song link" />
+        </div>
+        <div className="field song-form-full">
+          <label className="label">Patterns / Theka / Variations</label>
+          <textarea className="textarea" value={activeSong.patterns} onChange={(e) => updateActiveSong("patterns", e.target.value)} placeholder="Write patterns here. Example: Dha Dhin Dhin Dha | Dha Dhin Dhin Dha | Dha Tin Tin Ta | Ta Dhin Dhin Dha" />
+        </div>
+        <div className="field song-form-full">
+          <label className="label">Notes</label>
+          <textarea className="textarea" value={activeSong.notes} onChange={(e) => updateActiveSong("notes", e.target.value)} placeholder="Write observations: Sam, tempo changes, mukhda, tihai, where the song returns to beat 1, etc." />
+        </div>
+      </div>
+
+      <div className="btn-row">
+        <button className="btn btn-green" onClick={() => localStorage.setItem(storageKey, JSON.stringify(songs))}>Save Song Details</button>
+        <button className="btn btn-light" onClick={deleteSong} disabled={songs.length === 1}>Delete Current Song</button>
+      </div>
+
+      {embedUrl ? (
+        <div className="youtube-preview">
+          <iframe src={embedUrl} title={activeSong.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+        </div>
+      ) : null}
+
+      <p className="footer-note">For now, song details are saved in this browser using local storage. Later, we can connect this to Firebase Firestore so every student has their own saved songs.</p>
     </div>
   );
 }
@@ -498,6 +641,7 @@ function PlaceholderTaalPage({ taal, onBack }) {
     <div className="container">
       <div className="section-head"><div><h2>{taal.title}</h2><p>{taal.text}</p></div><button className="btn btn-light" onClick={onBack}>Back to Taals</button></div>
       <div className="card"><h3>Coming soon</h3><p className="muted">This taal will get the same interactive circular cycle, speed controls, theka, and maths comparison.</p></div>
+      <SongsSection taal={taal} />
     </div>
   );
 }
