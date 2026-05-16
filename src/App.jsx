@@ -180,6 +180,14 @@ function AppStyles() {
       .textarea:focus { border-color: #f97316; box-shadow: 0 0 0 4px rgba(249,115,22,0.12); }
       .youtube-preview { position: relative; width: 100%; padding-top: 56.25%; border-radius: 22px; overflow: hidden; background: #111827; margin-top: 16px; }
       .youtube-preview iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+      .pattern-section { margin-top: 16px; padding: 18px; border-radius: 22px; background: #fafaf9; border: 1px solid rgba(0,0,0,0.06); }
+      .pattern-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+      .pattern-time { max-width: 220px; }
+      .bol-matrix { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+      .bol-cell { text-align: center; font-weight: 800; }
+      .bol-cell small { display: block; color: #6b7280; margin-bottom: 5px; font-size: 12px; }
+      .bol-cell input { text-align: center; font-weight: 800; }
+      .pattern-notes { margin-top: 14px; }
       @media (max-width: 1050px) { .hero, .taal-layout, .grid, .stats, .math-layout, .song-form { grid-template-columns: 1fr; } .cycle-stage { min-height: auto; } .cycle-ring { width: 88vw; height: 88vw; max-width: 620px; max-height: 620px; } .beat-node { transform: rotate(var(--angle)) translateY(calc(-44vw + 34px)) rotate(calc(-1 * var(--angle))); } .beat-label { display: none; } .hero-main h1 { font-size: 40px; } }
     `}</style>
   );
@@ -523,13 +531,26 @@ function getYoutubeEmbedUrl(url) {
   }
 }
 
+function createEmptyPatternSection(index) {
+  return {
+    time: "",
+    matrix: [
+      ["Dha", "Dhin", "Dhin", "Dha"],
+      ["Dha", "Dhin", "Dhin", "Dha"],
+      ["Dha", "Tin", "Tin", "Ta"],
+      ["Ta", "Dhin", "Dhin", "Dha"],
+    ],
+    notes: "",
+  };
+}
+
 function createEmptySong(index, taalName) {
   return {
     title: `Song ${index}`,
     youtubeUrl: "",
     bpm: "",
     taal: taalName,
-    patterns: "",
+    patternSections: [createEmptyPatternSection(1)],
     notes: "",
   };
 }
@@ -540,7 +561,15 @@ function SongsSection({ taal }) {
   const [songs, setSongs] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey);
-      return saved ? JSON.parse(saved) : [createEmptySong(1, taal.shortTitle || taal.title)];
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (!parsed) return [createEmptySong(1, taal.shortTitle || taal.title)];
+
+      // Upgrade older saved song format to the new timestamp + 4x4 matrix format.
+      return parsed.map((song, index) => ({
+        ...createEmptySong(index + 1, taal.shortTitle || taal.title),
+        ...song,
+        patternSections: song.patternSections || [createEmptyPatternSection(1)],
+      }));
     } catch {
       return [createEmptySong(1, taal.shortTitle || taal.title)];
     }
@@ -558,6 +587,55 @@ function SongsSection({ taal }) {
       prev.map((song, index) =>
         index === activeSongIndex ? { ...song, [field]: value } : song
       )
+    );
+  };
+
+  const updatePatternSection = (sectionIndex, field, value) => {
+    setSongs((prev) =>
+      prev.map((song, songIndex) => {
+        if (songIndex !== activeSongIndex) return song;
+        const sections = (song.patternSections || [createEmptyPatternSection(1)]).map((section, index) =>
+          index === sectionIndex ? { ...section, [field]: value } : section
+        );
+        return { ...song, patternSections: sections };
+      })
+    );
+  };
+
+  const updateMatrixCell = (sectionIndex, rowIndex, colIndex, value) => {
+    setSongs((prev) =>
+      prev.map((song, songIndex) => {
+        if (songIndex !== activeSongIndex) return song;
+        const sections = (song.patternSections || [createEmptyPatternSection(1)]).map((section, index) => {
+          if (index !== sectionIndex) return section;
+          const matrix = section.matrix.map((row, r) =>
+            row.map((cell, c) => (r === rowIndex && c === colIndex ? value : cell))
+          );
+          return { ...section, matrix };
+        });
+        return { ...song, patternSections: sections };
+      })
+    );
+  };
+
+  const addPatternSection = () => {
+    setSongs((prev) =>
+      prev.map((song, index) => {
+        if (index !== activeSongIndex) return song;
+        const sections = song.patternSections || [createEmptyPatternSection(1)];
+        return { ...song, patternSections: [...sections, createEmptyPatternSection(sections.length + 1)] };
+      })
+    );
+  };
+
+  const deletePatternSection = (sectionIndex) => {
+    setSongs((prev) =>
+      prev.map((song, index) => {
+        if (index !== activeSongIndex) return song;
+        const sections = song.patternSections || [createEmptyPatternSection(1)];
+        if (sections.length === 1) return song;
+        return { ...song, patternSections: sections.filter((_, i) => i !== sectionIndex) };
+      })
     );
   };
 
@@ -580,7 +658,7 @@ function SongsSection({ taal }) {
       <div className="section-head" style={{ marginTop: 0 }}>
         <div>
           <h2>Song Practice Tab</h2>
-          <p>Add songs for this taal, save BPM, YouTube link, and write the patterns you hear.</p>
+          <p>Add songs for this taal, save BPM, YouTube link, timestamped 4×4 bol patterns, and notes.</p>
         </div>
         <button className="btn btn-primary" onClick={addSong}>+ Add Song</button>
       </div>
@@ -610,14 +688,68 @@ function SongsSection({ taal }) {
           <label className="label">YouTube Link</label>
           <input className="input" value={activeSong.youtubeUrl} onChange={(e) => updateActiveSong("youtubeUrl", e.target.value)} placeholder="Paste YouTube song link" />
         </div>
-        <div className="field song-form-full">
-          <label className="label">Patterns / Theka / Variations</label>
-          <textarea className="textarea" value={activeSong.patterns} onChange={(e) => updateActiveSong("patterns", e.target.value)} placeholder="Write patterns here. Example: Dha Dhin Dhin Dha | Dha Dhin Dhin Dha | Dha Tin Tin Ta | Ta Dhin Dhin Dha" />
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <div className="section-head" style={{ marginTop: 0, marginBottom: 8 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Timestamped 4×4 Pattern Matrix</h3>
+            <p className="muted">Each row is one vibhag of 4 beats. Add more timestamps when the song changes pattern.</p>
+          </div>
+          <button className="btn btn-light" onClick={addPatternSection}>+ Add Timestamp Pattern</button>
         </div>
-        <div className="field song-form-full">
-          <label className="label">Notes</label>
-          <textarea className="textarea" value={activeSong.notes} onChange={(e) => updateActiveSong("notes", e.target.value)} placeholder="Write observations: Sam, tempo changes, mukhda, tihai, where the song returns to beat 1, etc." />
-        </div>
+
+        {(activeSong.patternSections || [createEmptyPatternSection(1)]).map((section, sectionIndex) => (
+          <div className="pattern-section" key={sectionIndex}>
+            <div className="pattern-head">
+              <div className="field pattern-time" style={{ marginTop: 0 }}>
+                <label className="label">Time Stamp</label>
+                <input
+                  className="input"
+                  value={section.time}
+                  onChange={(e) => updatePatternSection(sectionIndex, "time", e.target.value)}
+                  placeholder="Example: 0:42"
+                />
+              </div>
+              <button className="btn btn-light" onClick={() => deletePatternSection(sectionIndex)} disabled={(activeSong.patternSections || []).length === 1}>
+                Delete Pattern
+              </button>
+            </div>
+
+            <div className="bol-matrix">
+              {section.matrix.map((row, rowIndex) =>
+                row.map((cell, colIndex) => {
+                  const beatNumber = rowIndex * 4 + colIndex + 1;
+                  return (
+                    <div className="bol-cell" key={`${rowIndex}-${colIndex}`}>
+                      <small>Beat {beatNumber}</small>
+                      <input
+                        className="input"
+                        value={cell}
+                        onChange={(e) => updateMatrixCell(sectionIndex, rowIndex, colIndex, e.target.value)}
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pattern-notes">
+              <label className="label">Pattern Notes</label>
+              <textarea
+                className="textarea"
+                value={section.notes || ""}
+                onChange={(e) => updatePatternSection(sectionIndex, "notes", e.target.value)}
+                placeholder="Example: This is where the singer returns to Sam, or the tabla changes to a variation."
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="field song-form-full">
+        <label className="label">General Song Notes</label>
+        <textarea className="textarea" value={activeSong.notes} onChange={(e) => updateActiveSong("notes", e.target.value)} placeholder="Write observations: Sam, tempo changes, mukhda, tihai, where the song returns to beat 1, etc." />
       </div>
 
       <div className="btn-row">
