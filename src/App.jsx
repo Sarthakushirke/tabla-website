@@ -280,10 +280,40 @@ function LevelsPage({ query, setQuery, setSelectedLevel }) {
   );
 }
 
-function playBeatSound(isSam) {
+function playBeatSound(isSam, soundType = "click") {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return;
+
   const ctx = new AudioContext();
+
+  if (soundType === "harmonium") {
+    // A soft harmonium-like drone/chord using layered oscillators.
+    const masterGain = ctx.createGain();
+    masterGain.connect(ctx.destination);
+    masterGain.gain.setValueAtTime(0.001, ctx.currentTime);
+    masterGain.gain.exponentialRampToValueAtTime(isSam ? 0.16 : 0.1, ctx.currentTime + 0.03);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.42);
+
+    const baseFreq = isSam ? 261.63 : 196.0; // Sa-like low pitch, higher on Sam
+    const chord = [baseFreq, baseFreq * 1.5, baseFreq * 2.0];
+
+    chord.forEach((freq, index) => {
+      const oscillator = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      oscillator.type = index === 0 ? "sawtooth" : "triangle";
+      oscillator.frequency.value = freq;
+      filter.type = "lowpass";
+      filter.frequency.value = 900;
+      oscillator.connect(filter);
+      filter.connect(masterGain);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.45);
+    });
+
+    return;
+  }
+
+  // Default metronome click sound.
   const oscillator = ctx.createOscillator();
   const gain = ctx.createGain();
   oscillator.connect(gain);
@@ -319,6 +349,7 @@ function TeentaalPage({ taal, onBack }) {
   const [activeBeat, setActiveBeat] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
+  const [soundType, setSoundType] = useState("click");
   const intervalRef = useRef(null);
   const speed = speedOptions[speedKey];
 
@@ -328,15 +359,15 @@ function TeentaalPage({ taal, onBack }) {
     intervalRef.current = setInterval(() => {
       setActiveBeat((prev) => {
         const next = prev === taal.matras ? 1 : prev + 1;
-        if (soundOn) playBeatSound(next === 1);
+        if (soundOn) playBeatSound(next === 1, soundType);
         return next;
       });
     }, beatMs);
     return () => clearInterval(intervalRef.current);
-  }, [isPlaying, speed.bpm, soundOn, taal.matras]);
+  }, [isPlaying, speed.bpm, soundOn, soundType, taal.matras]);
 
   const togglePlay = () => {
-    if (!isPlaying && soundOn) playBeatSound(activeBeat === 1);
+    if (!isPlaying && soundOn) playBeatSound(activeBeat === 1, soundType);
     setIsPlaying((prev) => !prev);
   };
 
@@ -393,6 +424,13 @@ function TeentaalPage({ taal, onBack }) {
             <button className={`btn ${isPlaying ? "btn-dark" : "btn-green"}`} onClick={togglePlay}>{isPlaying ? "Pause Cycle" : "Start Cycle"}</button>
             <button className="btn btn-light" onClick={() => setActiveBeat(1)}>Reset</button>
             <button className="btn btn-light" onClick={() => setSoundOn((v) => !v)}>Sound: {soundOn ? "On" : "Off"}</button>
+          </div>
+          <div style={{ marginTop: 20 }}>
+            <h3>Sound Type</h3>
+            <div className="mini-list">
+              <button className={`btn btn-light ${soundType === "click" ? "btn-active" : ""}`} onClick={() => setSoundType("click")}>Metronome Click</button>
+              <button className={`btn btn-light ${soundType === "harmonium" ? "btn-active" : ""}`} onClick={() => setSoundType("harmonium")}>Harmonium Tone</button>
+            </div>
           </div>
           <div style={{ marginTop: 20 }}>
             <h3>Vibhag Structure</h3>
